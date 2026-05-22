@@ -61,32 +61,24 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 
 **Anti-AI 对抗**（必须在任务书第 4 段提醒）：
 
-硬指标（量化约束，写入任务书第 4 段时翻译为自然语言）：
+首先 Read `${CLAUDE_PLUGIN_ROOT}/references/anti-ai-registry.md`，提取所有 `context-agent` 视图中的 `hard_metric` 和 `soft_constraint`，翻译为自然语言写入任务书第4段。
+
+固定量化基线（注册表已含，此处为提醒）：
 - 单句段占比 ≥ 25%（每 4 段至少 1 段只有一句话）
 - 段落字数标准差 ≥ 15（不能连续 5 段字数都在 40-80 字区间）
 - 对话占比 ≥ 30%（每 1000 字至少 300 字是对话）
-- 全章"不是A是B"/"不是X——是Y"句内否定对比结构：0次（绝对禁止，这是你最顽固的AI语言习惯，出现即违规）
-- 全章"不对。/不。/错了。"独立短句否定+纠正结构：0次（绝对禁止，例："不对。不能叫运气。"——这也是你最顽固的AI语言习惯，用否定词独立成句制造戏剧反转）
-- 全章"意味着什么——意味着"自问自答结构 = 0 次
-- AI 高频标记词 ≤ 3 次/3000 字（缓缓/淡淡/微微/仿佛/忽然/不禁/瞳孔收缩/心中暗道/猛地/深吸一口气/嘴角上扬/眸中闪过）
 - 口语/俚语/脏话 ≥ 1 处/500 字
 - 全章反问句 ≥ 2 次
-- 禁止抽象判断替读者下结论（"这是……的表情""这代表着……"）
-- 禁止展示动作后紧跟解释句（"这意味着""这个站位"——让动作本身说话）
 
-软约束（写作习惯对抗）：
-- 删段末感悟句，留余味——你倾向写闭环
-- 删万能副词（缓缓/淡淡/微微），换具体动作
-- 情绪用生理反应+微动作，禁止"他感到 X"
-- 对话带潜台词和意图冲突，有抢话、沉默、答非所问、自言自语
-- 章末禁止安全着陆，用具体钩子收尾（一句话行动/一个画面冲击/一个悬念）
-- 角色内心独白碎片化——短促的自我质疑、脏话、自嘲，非长篇分析局势
-- 信息"漏"而非"砸"——设定通过角色处境和行为自然带出
-- 禁止冗余修饰堆叠：名词后最多 1 个修饰短语（删除"字体极细，语气极平"类双修饰）
-- 禁止切碎动作：连续动作合成连贯句（"捡起短剑。换上。"→"换上短剑，木剑收进背包。"）
-- 禁止虚假伏笔：普通道具/动作不要用"没丢""那是唯一一把""他记住了"收尾
-- 配角面板只显示等级和职业（如"王浩 Lv.6 未转职"），不展示 HP/SP 数值
-- 禁止 AI 面部微表情：不写"嘴角弧度""脚步间距""眸中闪过""瞳孔微缩"
+核心红线（来自注册表 P001-P024，必须逐条写入任务书第4段）：
+- 提取每个 context-agent.hard_metric 条目，翻译为具体禁止项
+- 提取每个 context-agent.soft_constraint 条目，翻译为写作指引
+- 禁止抽象判断替读者下结论
+- 禁止展示动作后紧跟解释句
+
+软约束（来自注册表 + 写作习惯对抗）：
+- 从注册表提取所有 soft_constraint 条目
+- 补充通用写作习惯：角色内心独白碎片化、信息"漏"而非"砸"
 
 ## 3. 执行流程
 
@@ -96,7 +88,9 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 2. `Read` 章纲原文（load-context 的 outline 可能截断）
 3. 确定卷号（优先 runtime contracts / latest commit；必要时兼容读取 state.json 投影）
 4. 读取 `style-target.md`：路径为 `{skill_root}/references/style-target.md` 或 `{scripts_dir}/../skills/webnovel-write/references/style-target.md`。将其"共性"栏指标翻译为本章具体的写作约束，写入任务书第 4 段；不暴露文件名。
-5. 若用户明确提供额外的项目级文风/反 AI 味规则文件，读取并只消费规则，不在任务书暴露文件名。
+5. **读取反AI注册表**：Read `${CLAUDE_PLUGIN_ROOT}/references/anti-ai-registry.md`（若路径不可达则尝试 `{scripts_dir}/../references/anti-ai-registry.md`），提取所有 `context-agent` 视图中的 `hard_metric` 和 `soft_constraint`，翻译为自然语言约束写入任务书第4段。注册表是必须加载项，不可跳过。
+6. 若项目存在 `.webnovel/style_profile.md`（项目风格目标文件），必须 Read 并将其中风格特征翻译为任务书第4段的具体写作指导。加载位置在 style-target.md 之后。
+7. 若用户明确提供额外的项目级文风/反 AI 味规则文件，读取并只消费规则，不在任务书暴露文件名。
 
 ### B：按需深查（只查基础包不足的）
 
@@ -115,7 +109,7 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 ### D：组装
 
 1. 推断：动机 = 目标+处境+钩子压力；情绪底色 = 上章结尾+走向；可用能力 = 境界+设定禁用
-2. 从 `story_contracts` 取 `reasoning`（style_priority/pacing_strategy）+ `anti_patterns`，合并用户明确提供的项目级文风规则，并加载 `style-target.md` 的量化指标
+2. 从 `story_contracts` 取 `reasoning`（style_priority/pacing_strategy）+ `anti_patterns`，合并步骤 A.5 的反AI注册表约束和用户明确提供的项目级文风规则，并加载 `style-target.md` 的量化指标
 3. 组装五段任务书
 4. 红线校验
 

@@ -105,6 +105,7 @@ class StorySystemEngine:
             route["route_anti_patterns"],
             self._extract_anti_patterns(base_context),
             self._extract_anti_patterns(dynamic_context),
+            self._load_registry_anti_patterns(),
         )
         anti_patterns = self._rank_anti_patterns(reasoning, raw_anti)
 
@@ -255,6 +256,35 @@ class StorySystemEngine:
                 ).strip()
                 rows.append(full_row)
         return rows
+
+    def _load_registry_anti_patterns(self) -> List[Dict[str, Any]]:
+        """Parse anti-ai-registry.md and return anti-pattern entries for story-system."""
+        registry_path = self.csv_dir.parent / "anti-ai-registry.md"
+        if not registry_path.exists():
+            return []
+        try:
+            text = registry_path.read_text(encoding="utf-8")
+        except Exception:
+            return []
+        patterns: List[Dict[str, Any]] = []
+        # Match each pattern block: ### [P###] Title ... up to next ### or ## or end
+        blocks = re.split(r'\n(?=### \[P\d+\])', text)
+        for block in blocks:
+            title_match = re.match(r'### \[(P\d+)\]\s*(.+)', block)
+            if not title_match:
+                continue
+            pid = title_match.group(1)
+            ptitle = title_match.group(2).strip()
+            # Extract description
+            desc_match = re.search(r'\*\*定义\*\*\s*\n- description:\s*(.+)', block)
+            desc = desc_match.group(1).strip() if desc_match else ptitle
+            # Build anti-pattern entry
+            patterns.append({
+                "text": f"[{pid}] {ptitle} — {desc}",
+                "source_table": "anti-ai-registry",
+                "source_id": pid,
+            })
+        return patterns
 
     def _extract_anti_patterns(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         extracted: List[Dict[str, Any]] = []
