@@ -11,6 +11,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.in_use/
 
 # Test artifacts
 .pytest_cache/

@@ -61,9 +61,15 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 
 **Anti-AI 对抗**（必须在任务书第 4 段提醒）：
 
-首先 Read `${CLAUDE_PLUGIN_ROOT}/references/anti-ai-registry.md`，提取所有 `context-agent` 视图中的 `hard_metric` 和 `soft_constraint`，翻译为自然语言写入任务书第4段。
+**根因提醒**：AI最根本的写作问题是"全知者叙事姿态"。两大具体表现：(1)**否定前置**——禁止先否定再陈述，直接写正面；(2)**越位叙述**——禁止替读者解读含义、替角色贴情绪标签。
 
-固定量化基线（注册表已含，此处为提醒）：
+**任务书第4段写入规则**：
+- 只写入叙事姿态层铁律（上述否定前置 + 越位叙述），合并为3-5句自然语言提醒
+- style-target.md 量化指标（单句段≥25%、对话≥30%等）写入
+- style_profile.md 的风格特征写入
+- **禁止**将注册表 P001-P036 逐条罗列到任务书中。句式级规则由 reviewer（Step 3）和 polish（Step 4）负责检测和修复，不需要起草时记忆。
+
+Read `${CLAUDE_PLUGIN_ROOT}/references/anti-ai-registry.md` 提取所有 context-agent 视图的 hard_metric 和 soft_constraint——但仅将其中"叙事姿态层"的条目融入第4段，句式层的条目不写入任务书。
 - 单句段占比 ≥ 25%（每 4 段至少 1 段只有一句话）
 - 段落字数标准差 ≥ 15（不能连续 5 段字数都在 40-80 字区间）
 - 对话占比 ≥ 30%（每 1000 字至少 300 字是对话）
@@ -109,7 +115,7 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" extr
 ### D：组装
 
 1. 推断：动机 = 目标+处境+钩子压力；情绪底色 = 上章结尾+走向；可用能力 = 境界+设定禁用
-2. 从 `story_contracts` 取 `reasoning`（style_priority/pacing_strategy）+ `anti_patterns`，合并步骤 A.5 的反AI注册表约束和用户明确提供的项目级文风规则，并加载 `style-target.md` 的量化指标
+2. 从 `story_contracts` 取 `reasoning`（style_priority/pacing_strategy）+ `anti_patterns`。合并步骤 A.5 的反AI注册表约束时注意：load-context 返回的 anti_patterns 已包含注册表派生条目（story_system_engine 在构建时注入），与 A.5 直接读取的注册表原文可能重叠——合并后去重，以注册表原文为最终权威。同时加载 `style-target.md` 的量化指标和 A.6 的项目风格约束，整合为任务书第4段。
 3. 组装五段任务书
 4. 红线校验
 
